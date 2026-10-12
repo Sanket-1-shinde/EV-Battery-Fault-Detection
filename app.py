@@ -46,14 +46,18 @@ if st.button("🔍 Predict Fault"):
           speed, hall, est_soc, gt_soc, residual]],
         columns=FEATURE_COLUMNS
     )
+    
+    prediction = model.predict(input_df)[0]
+    probabilities = model.predict_proba(input_df)[0]
 
-prediction = model.predict(input_df)[0]
-probabilities = model.predict_proba(input_df)[0]
+    st.success(
+        f"### Predicted Fault: **{FAULT_MAP.get(prediction, prediction)}**"
+    )
 
-st.success(
-    f"### Predicted Fault: **{FAULT_MAP.get(prediction, prediction)}**"
-)
+    st.write("### Fault Probabilities")
+    for cls, prob in zip(model.classes_, probabilities):
+        st.write(
+            f"- **{FAULT_MAP.get(cls, cls)}** : {prob * 100:.2f}%"
+        )
 
-st.write("### Fault Probabilities")
-for cls, prob in zip(model.classes_, probabilities):
-    st.write(f"- **{FAULT_MAP.get(cls, cls)}** : {prob * 100:.2f}%")
+
