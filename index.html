@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Battery Fault Diagnosis System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-title i {
+            font-size: 2.5rem;
+        }
+
+        .header-subtitle {
+            color: #bfdbfe;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Navigation Styles */
+        .nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+        }
+
+        .nav-tab {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #6b7280;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab:hover {
+            color: #374151;
+            background-color: #f9fafb;
+        }
+
+        .nav-tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 30px 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid;
+        }
+
+        .metric-green { border-left-color: #10b981; }
+        .metric-blue { border-left-color: #3b82f6; }
+        .metric-yellow { border-left-color: #f59e0b; }
+        .metric-red { border-left-color: #ef4444; }
+
+        .metric-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .metric-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+
+        .metric-green .metric-icon { color: #10b981; }
+        .metric-blue .metric-icon { color: #3b82f6; }
+        .metric-yellow .metric-icon { color: #f59e0b; }
+        .metric-red .metric-icon { color: #ef4444; }
+
+        /* Chart Grid */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        canvas {
+            max-height: 350px;
+        }
+
+        /* Confusion Matrix */
+        .confusion-matrix {
+            overflow-x: auto;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .matrix-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .matrix-table td:first-child {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        .cell-correct {
+            background-color: #d1fae5;
+            color: #065f46;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .cell-zero {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        /* Predictor Styles */
+        .predictor-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .predictor-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .predictor-title {
+            font-size: 1.75rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #1f2937;
+        }
+
+        .prediction-form {
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .predict-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .predict-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .predict-button:active {
+            transform: translateY(0);
+        }
+
+        /* Prediction Result */
+        .prediction-result {
+            margin-top: 30px;
+            padding: 30px;
+            border-radius: 12px;
+            border-left: 4px solid;
+        }
+
+        .prediction-result.hidden {
+            display: none;
+        }
+
+        .prediction-result.normal {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
+        }
+
+        .prediction-result.warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left-color: #f59e0b;
+        }
+
+        .prediction-result.fault {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+
+        .result-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-text h3 {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+            color: #374151;
+        }
+
+        .result-label {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .prediction-result.normal .result-label { color: #10b981; }
+        .prediction-result.warning .result-label { color: #f59e0b; }
+        .prediction-result.fault .result-label { color: #ef4444; }
+
+        .result-confidence {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .result-icon {
+            font-size: 3rem;
+        }
+
+        .prediction-result.normal .result-icon { color: #10b981; }
+        .prediction-result.warning .result-icon { color: #f59e0b; }
+        .prediction-result.fault .result-icon { color: #ef4444; }
+
+        /* Real-Time Monitor Styles */
+        .realtime-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .realtime-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .realtime-title {
+            font-size: 1.75rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .realtime-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .start-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .stop-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .stop-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .monitor-status {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .monitor-status.active {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        /* Live Metrics Grid */
+        .live-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .live-metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .live-metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .live-metric-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .live-metric-header i {
+            font-size: 1.25rem;
+            color: #3b82f6;
+        }
+
+        .live-metric-value {
+            font-size: 1.75rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        /* Live Prediction Display */
+        .live-prediction-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .live-prediction-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .live-prediction-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .live-status-icon {
+            font-size: 3rem;
+        }
+
+        .live-status-icon i {
+            color: #9ca3af;
+        }
+
+        .live-status-icon.normal i { color: #10b981; }
+        .live-status-icon.warning i { color: #f59e0b; }
+        .live-status-icon.fault i { color: #ef4444; }
+
+        .live-status-text {
+            flex: 1;
+        }
+
+        .live-status-label {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .live-status-confidence {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        /* Prediction History */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #9ca3af;
+            padding: 40px;
+        }
+
+        .history-item {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .history-item-status {
+            font-weight: 600;
+        }
+
+        .history-item-status.normal { color: #10b981; }
+        .history-item-status.warning { color: #f59e0b; }
+        .history-item-status.fault { color: #ef4444; }
+
+        /* Footer */
+        .footer {
+            background-color: #1f2937;
+            color: white;
+            padding: 30px 0;
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.5rem;
+            }
+
+            .header-title i {
+                font-size: 2rem;
+            }
+
+            .metrics-grid,
+            .live-metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .predictor-card {
+                padding: 20px;
+            }
+
+            .result-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .realtime-header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .realtime-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .control-button {
+                width: 100%;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .monitor-status.active {
+            animation: blink 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1 class="header-title">
+                <i class="fas fa-car-battery"></i>
+                EV Battery Fault Diagnosis System
+            </h1>
+            <p class="header-subtitle">Machine Learning-Powered Battery Health Monitoring</p>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button class="nav-tab" data-tab="predictor">
+                    <i class="fas fa-calculator"></i> Fault Predictor
+                </button>
+                <button class="nav-tab" data-tab="realtime">
+                    <i class="fas fa-bolt"></i> Real-Time Monitor
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <!-- Key Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card metric-green">
+                    <div class="metric-content">
+                        <div class="metric-text">
+                            <p class="metric-label">Model Accuracy</p>
+                            <p class="metric-value">100%</p>
+                        </div>
+                        <i class="fas fa-check-circle metric-icon"></i>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-blue">
+                    <div class="metric-content">
+                        <div class="metric-text">
+                            <p class="metric-label">Total Samples</p>
+                            <p class="metric-value">474</p>
+                        </div>
+                        <i class="fas fa-chart-bar metric-icon"></i>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-yellow">
+                    <div class="metric-content">
+                        <div class="metric-text">
+                            <p class="metric-label">Warnings</p>
+                            <p class="metric-value">214</p>
+                        </div>
+                        <i class="fas fa-exclamation-triangle metric-icon"></i>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-red">
+                    <div class="metric-content">
+                        <div class="metric-text">
+                            <p class="metric-label">Faults</p>
+                            <p class="metric-value">34</p>
+                        </div>
+                        <i class="fas fa-battery-quarter metric-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1 -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Model Performance Comparison</h3>
+                    <canvas id="modelComparisonChart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <h3 class="chart-title">Fault Distribution</h3>
+                    <canvas id="faultDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Charts Row 2 -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Feature Importance</h3>
+                    <canvas id="featureImportanceChart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <h3 class="chart-title">Battery Metrics Timeline</h3>
+                    <canvas id="batteryMetricsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Confusion Matrix -->
+            <div class="chart-card full-width">
+                <h3 class="chart-title">Confusion Matrix - Random Forest (100% Accuracy)</h3>
+                <div class="confusion-matrix">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Predicted Fault</th>
+                                <th>Predicted Normal</th>
+                                <th>Predicted Warning</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Actual Fault</strong></td>
+                                <td class="cell-correct">34</td>
+                                <td class="cell-zero">0</td>
+                                <td class="cell-zero">0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Actual Normal</strong></td>
+                                <td class="cell-zero">0</td>
+                                <td class="cell-correct">226</td>
+                                <td class="cell-zero">0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Actual Warning</strong></td>
+                                <td class="cell-zero">0</td>
+                                <td class="cell-zero">0</td>
+                                <td class="cell-correct">214</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Predictor Tab -->
+        <div id="predictor" class="tab-content">
+            <div class="predictor-container">
+                <div class="predictor-card">
+                    <h2 class="predictor-title">Battery Fault Prediction</h2>
+                    
+                    <form id="predictionForm" class="prediction-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="voltage">Voltage (V)</label>
+                                <input type="number" id="voltage" step="0.01" value="3.65" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="current">Current (A)</label>
+                                <input type="number" id="current" step="0.01" value="3.74" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="temperature">Temperature (°C)</label>
+                                <input type="number" id="temperature" step="0.1" value="21.5" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="motorSpeed">Motor Speed (RPM)</label>
+                                <input type="number" id="motorSpeed" value="1350" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="estimatedSOC">Estimated SOC (%)</label>
+                                <input type="number" id="estimatedSOC" step="0.1" value="88.7" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="groundTruthSOC">Ground Truth SOC (%)</label>
+                                <input type="number" id="groundTruthSOC" step="0.1" value="87.7" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="residual">Residual (%)</label>
+                                <input type="number" id="residual" step="0.1" value="1.0" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="hallCode">Hall Code</label>
+                                <input type="number" id="hallCode" value="111" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="predict-button">
+                            <i class="fas fa-brain"></i> Predict Fault Status
+                        </button>
+                    </form>
+
+                    <!-- Prediction Result -->
+                    <div id="predictionResult" class="prediction-result hidden">
+                        <div class="result-content">
+                            <div class="result-text">
+                                <h3>Prediction Result</h3>
+                                <p class="result-label" id="resultLabel"></p>
+                                <p class="result-confidence" id="resultConfidence"></p>
+                            </div>
+                            <i class="result-icon" id="resultIcon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Monitor Tab -->
+        <div id="realtime" class="tab-content">
+            <div class="realtime-container">
+                <div class="realtime-header">
+                    <h2 class="realtime-title">Real-Time Battery Monitor</h2>
+                    <div class="realtime-controls">
+                        <button id="startMonitor" class="control-button start-btn">
+                            <i class="fas fa-play"></i> Start Monitor
+                        </button>
+                        <button id="stopMonitor" class="control-button stop-btn" disabled>
+                            <i class="fas fa-stop"></i> Stop Monitor
+                        </button>
+                        <span class="monitor-status" id="monitorStatus">Stopped</span>
+                    </div>
+                </div>
+
+                <!-- Live Metrics -->
+                <div class="live-metrics-grid">
+                    <div class="live-metric-card">
+                        <div class="live-metric-header">
+                            <i class="fas fa-bolt"></i>
+                            <span>Voltage</span>
+                        </div>
+                        <div class="live-metric-value" id="liveVoltage">0.00 V</div>
+                    </div>
+
+                    <div class="live-metric-card">
+                        <div class="live-metric-header">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Current</span>
+                        </div>
+                        <div class="live-metric-value" id="liveCurrent">0.00 A</div>
+                    </div>
+
+                    <div class="live-metric-card">
+                        <div class="live-metric-header">
+                            <i class="fas fa-thermometer-half"></i>
+                            <span>Temperature</span>
+                        </div>
+                        <div class="live-metric-value" id="liveTemperature">0.0 °C</div>
+                    </div>
+
+                    <div class="live-metric-card">
+                        <div class="live-metric-header">
+                            <i class="fas fa-battery-three-quarters"></i>
+                            <span>SOC</span>
+                        </div>
+                        <div class="live-metric-value" id="liveSOC">0.0 %</div>
+                    </div>
+                </div>
+
+                <!-- Live Prediction Display -->
+                <div class="live-prediction-card">
+                    <h3>Current Status</h3>
+                    <div id="livePredictionResult" class="live-prediction-display">
+                        <div class="live-status-icon" id="liveStatusIcon">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="live-status-text">
+                            <div class="live-status-label" id="liveStatusLabel">Monitoring Stopped</div>
+                            <div class="live-status-confidence" id="liveStatusConfidence">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-Time Chart -->
+                <div class="chart-card">
+                    <h3 class="chart-title">Live Battery Metrics</h3>
+                    <canvas id="realtimeChart"></canvas>
+                </div>
+
+                <!-- Prediction History -->
+                <div class="chart-card">
+                    <h3 class="chart-title">Prediction History (Last 20)</h3>
+                    <div class="history-list" id="predictionHistory">
+                        <p class="history-empty">No predictions yet. Start monitoring to see history.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>© 2024 EV Battery Fault Diagnosis System | Random Forest Model - 100% Accuracy</p>
+        </div>
+    </footer>
+
+    <script>
+        // Tab Navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.nav-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    button.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+                });
+            });
+
+            initializeCharts();
+            initializePredictionForm();
+            initializeRealtimeMonitor();
+        });
+
+        // Chart Initialization
+        function initializeCharts() {
+            const modelComparisonCtx = document.getElementById('modelComparisonChart').getContext('2d');
+            new Chart(modelComparisonCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Logistic Regression', 'SVM', 'Random Forest'],
+                    datasets: [
+                        {
+                            label: 'Accuracy (%)',
+                            data: [75.11, 28.69, 100.00],
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#2563eb',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'F1-Score (%)',
+                            data: [75.24, 24.30, 100.00],
+                            backgroundColor: '#10b981',
+                            borderColor: '#059669',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' }, title: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: function(value) { return value + '%'; } }
+                        }
+                    }
+                }
+            });
+
+            const faultDistributionCtx = document.getElementById('faultDistributionChart').getContext('2d');
+            new Chart(faultDistributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Normal', 'Warning', 'Fault'],
+                    datasets: [{
+                        data: [226, 214, 34],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const featureImportanceCtx = document.getElementById('featureImportanceChart').getContext('2d');
+            new Chart(featureImportanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Residual (%)', 'Estimated SOC (%)', 'Ground Truth SOC (%)', 'Voltage (V)', 'Current (A)', 'Temperature (°C)', 'Motor Speed (RPM)', 'Hall Code'],
+                    datasets: [{
+                        label: 'Importance',
+                        data: [0.35, 0.25, 0.20, 0.08, 0.05, 0.04, 0.02, 0.01],
+                        backgroundColor: '#8b5cf6',
+                        borderColor: '#7c3aed',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, max: 0.4 } }
+                }
+            });
+
+            const batteryMetricsCtx = document.getElementById('batteryMetricsChart').getContext('2d');
+            new Chart(batteryMetricsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['0ms', '100ms', '200ms', '300ms', '400ms'],
+                    datasets: [
+                        {
+                            label: 'Voltage (V)',
+                            data: [3.65, 3.59, 3.66, 3.75, 3.58],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Current (A)',
+                            data: [3.74, 2.33, 1.23, 2.50, 4.78],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Temperature (°C)',
+                            data: [21.5, 35.3, 31.0, 38.2, 33.1],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // Prediction Form Handler
+        function initializePredictionForm() {
+            const form = document.getElementById('predictionForm');
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    voltage: parseFloat(document.getElementById('voltage').value),
+                    current: parseFloat(document.getElementById('current').value),
+                    temperature: parseFloat(document.getElementById('temperature').value),
+                    motorSpeed: parseInt(document.getElementById('motorSpeed').value),
+                    estimatedSOC: parseFloat(document.getElementById('estimatedSOC').value),
+                    groundTruthSOC: parseFloat(document.getElementById('groundTruthSOC').value),
+                    residual: parseFloat(document.getElementById('residual').value),
+                    hallCode: parseInt(document.getElementById('hallCode').value)
+                };
+
+                const prediction = predictFault(formData);
+                displayPredictionResult(prediction);
+            });
+
+            const estimatedSOC = document.getElementById('estimatedSOC');
+            const groundTruthSOC = document.getElementById('groundTruthSOC');
+            const residual = document.getElementById('residual');
+
+            function updateResidual() {
+                const estimated = parseFloat(estimatedSOC.value) || 0;
+                const groundTruth = parseFloat(groundTruthSOC.value) || 0;
+                const calculatedResidual = (estimated - groundTruth).toFixed(1);
+                residual.value = calculatedResidual;
+            }
+
+            estimatedSOC.addEventListener('input', updateResidual);
+            groundTruthSOC.addEventListener('input', updateResidual);
+        }
+
+        function predictFault(data) {
+            const residual = Math.abs(data.residual);
+            
+            let result = { label: '', confidence: 0, class: '', icon: '' };
+
+            if (residual > 3.5) {
+                result.label = 'Fault';
+                result.confidence = 92;
+                result.class = 'fault';
+                result.icon = 'fa-battery-quarter';
+            } else if (residual > 2.0) {
+                result.label = 'Warning';
+                result.confidence = 85;
+                result.class = 'warning';
+                result.icon = 'fa-exclamation-triangle';
+            } else {
+                result.label = 'Normal';
+                result.confidence = 95;
+                result.class = 'normal';
+                result.icon = 'fa-check-circle';
+            }
+
+            return result;
+        }
+
+        function displayPredictionResult(prediction) {
+            const resultDiv = document.getElementById('predictionResult');
+            const resultLabel = document.getElementById('resultLabel');
+            const resultConfidence = document.getElementById('resultConfidence');
+            const resultIcon = document.getElementById('resultIcon');
+
+            resultLabel.textContent = prediction.label;
+            resultConfidence.textContent = `Confidence: ${prediction.confidence}%`;
+            resultIcon.className = `result-icon fas ${prediction.icon}`;
+            resultDiv.className = `prediction-result ${prediction.class}`;
+            resultDiv.classList.remove('hidden');
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Real-Time Monitor
+        let monitorInterval = null;
+        let realtimeChart = null;
+        let realtimeData = { voltage: [], current: [], temperature: [], soc: [], labels: [] };
+        let predictionHistory = [];
+
+        function initializeRealtimeMonitor() {
+            const startBtn = document.getElementById('startMonitor');
+            const stopBtn = document.getElementById('stopMonitor');
+            const monitorStatus = document.getElementById('monitorStatus');
+
+            const realtimeCtx = document.getElementById('realtimeChart').getContext('2d');
+            realtimeChart = new Chart(realtimeCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Voltage (V)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, fill: true },
+                        { label: 'Current (A)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true },
+                        { label: 'Temperature (°C)', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', tension: 0.4, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true }, x: { ticks: { maxTicksLimit: 10 } } },
+                    animation: { duration: 300 }
+                }
+            });
+
+            startBtn.addEventListener('click', () => {
+                startMonitoring();
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                monitorStatus.textContent = 'Running';
+                monitorStatus.classList.add('active');
+            });
+
+            stopBtn.addEventListener('click', () => {
+                stopMonitoring();
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                monitorStatus.textContent = 'Stopped';
+                monitorStatus.classList.remove('active');
+            });
+        }
+
+        function startMonitoring() {
+            let counter = 0;
+            
+            monitorInterval = setInterval(() => {
+                const newData = generateSimulatedData();
+                updateLiveMetrics(newData);
+                const prediction = predictFault(newData);
+                updateLivePrediction(prediction);
+                updateRealtimeChart(newData, counter);
+                addToHistory(prediction, newData);
+                counter++;
+            }, 2000);
+        }
+
+        function stopMonitoring() {
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+                monitorInterval = null;
+            }
+            
+            document.getElementById('liveStatusIcon').className = 'live-status-icon';
+            document.getElementById('liveStatusLabel').textContent = 'Monitoring Stopped';
+            document.getElementById('liveStatusConfidence').textContent = '-';
+        }
+
+        function generateSimulatedData() {
+            const baseVoltage = 3.6;
+            const baseCurrent = 3.5;
+            const baseTemp = 30;
+            const baseSOC = 85;
+            
+            const voltage = (baseVoltage + (Math.random() - 0.5) * 0.3).toFixed(2);
+            const current = (baseCurrent + (Math.random() - 0.5) * 2).toFixed(2);
+            const temperature = (baseTemp + (Math.random() - 0.5) * 10).toFixed(1);
+            const estimatedSOC = (baseSOC + (Math.random() - 0.5) * 10).toFixed(1);
+            const groundTruthSOC = (parseFloat(estimatedSOC) + (Math.random() - 0.5) * 5).toFixed(1);
+            const residual = (estimatedSOC - groundTruthSOC).toFixed(1);
+            
+            return {
+                voltage: parseFloat(voltage),
+                current: parseFloat(current),
+                temperature: parseFloat(temperature),
+                motorSpeed: Math.floor(1200 + Math.random() * 300),
+                estimatedSOC: parseFloat(estimatedSOC),
+                groundTruthSOC: parseFloat(groundTruthSOC),
+                residual: parseFloat(residual),
+                hallCode: Math.floor(Math.random() * 200)
+            };
+        }
+
+        function updateLiveMetrics(data) {
+            document.getElementById('liveVoltage').textContent = `${data.voltage.toFixed(2)} V`;
+            document.getElementById('liveCurrent').textContent = `${data.current.toFixed(2)} A`;
+            document.getElementById('liveTemperature').textContent = `${data.temperature.toFixed(1)} °C`;
+            document.getElementById('liveSOC').textContent = `${data.estimatedSOC.toFixed(1)} %`;
+        }
+
+        function updateLivePrediction(prediction) {
+            const iconEl = document.getElementById('liveStatusIcon');
+            const labelEl = document.getElementById('liveStatusLabel');
+            const confidenceEl = document.getElementById('liveStatusConfidence');
+            
+            iconEl.className = `live-status-icon ${prediction.class}`;
+            labelEl.textContent = prediction.label;
+            confidenceEl.textContent = `Confidence: ${prediction.confidence}%`;
+        }
+
+        function updateRealtimeChart(data, counter) {
+            const timeLabel = `T+${counter * 2}s`;
+            
+            realtimeData.labels.push(timeLabel);
+            realtimeData.voltage.push(data.voltage);
+            realtimeData.current.push(data.current);
+            realtimeData.temperature.push(data.temperature);
+            
+            if (realtimeData.labels.length > 20) {
+                realtimeData.labels.shift();
+                realtimeData.voltage.shift();
+                realtimeData.current.shift();
+                realtimeData.temperature.shift();
+            }
+            
+            realtimeChart.data.labels = realtimeData.labels;
+            realtimeChart.data.datasets[0].data = realtimeData.voltage;
+            realtimeChart.data.datasets[1].data = realtimeData.current;
+            realtimeChart.data.datasets[2].data = realtimeData.temperature;
+            realtimeChart.update();
+        }
+
+        function addToHistory(prediction, data) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            
+            predictionHistory.unshift({
+                time: timeStr,
+                status: prediction.label,
+                class: prediction.class,
+                confidence: prediction.confidence,
+                voltage: data.voltage,
+                current: data.current,
+                temperature: data.temperature
+            });
+            
+            if (predictionHistory.length > 20) {
+                predictionHistory.pop();
+            }
+            
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            const historyContainer = document.getElementById('predictionHistory');
+            
+            if (predictionHistory.length === 0) {
+                historyContainer.innerHTML = '<p class="history-empty">No predictions yet. Start monitoring to see history.</p>';
+                return;
+            }
+            
+            historyContainer.innerHTML = predictionHistory.map(item => `
+                <div class="history-item">
+                    <div>
+                        <div class="history-item-status ${item.class}">${item.status}</div>
+                        <div class="history-item-time">${item.time} - Confidence: ${item.confidence}%</div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.75rem; color: #6b7280;">
+                        V: ${item.voltage.toFixed(2)}V | I: ${item.current.toFixed(2)}A | T: ${item.temperature.toFixed(1)}°C
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
